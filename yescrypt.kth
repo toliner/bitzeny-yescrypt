@@ -1,0 +1,82 @@
+/*-
+ * Copyright 2009 Colin Percival
+ * Copyright 2013,2014 Alexander Peslyak
+ * Copyright 2017 Toliner
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This file was originally written by Colin Percival as part of the Tarsnap
+ * online backup system.
+ * 
+ * This file was changed and translated by Toliner.
+ */
+#ifndef _YESCRYPT_H_
+#define _YESCRYPT_H_
+
+#include <stdint.h>
+#include <stdlib.h> /* for size_t */
+
+/**
+ * メモリ割り当てに使われる、内部の型です。 これを直接使わないでください。
+ * 将来のバージョンで、それぞれがかもしれないので、yescrypt_shared_tとyescrypt_local_tを
+ * 適切な代わりとして用いてください。
+ */
+yescrypt_region_t {
+	void * base, * aligned;
+	size_t base_size, aligned_size;
+}
+
+/**
+ * 共通データ(ROM)とスレッドローカルなデータ(RAM)のデータ構造型
+ */
+typealias yescrypt_shared1_t = yescrypt_region_t;
+yescrypt_shared_t {
+	yescrypt_shared1_t shared1;
+	uint32_t mask1;
+};
+typealias yescrypt_local_t = yescrypt_region_t;
+
+//yescrypt_init_shared()で使うフラグ
+enum yescrypt_init_shared_flags_t {
+    YESCRYPT_SHARED_DEFAULTS = 0,
+    YESCRYPT_SHARED_PREALLOCATED = 0x100
+}
+
+/**
+ * yescrypt_kdf(), yescrypt_gensalt_r(), yescrypt_gensalt()で使うフラグ。
+ * or演算で合成可能(ただし、YESCRYPT_WORMとYESCRYPT_RWは共存不可。
+ * 各フラグの意味は、yescrypt🤥_kdf()のドキュメント参照。
+ */
+enum yescrypt_flags_t {
+    //public
+    YESCRYPT_WORM = 0,
+    YESCRYPT_RW = 1,
+    YESCRYPT_PAEALLEL_SMIX = 2,
+    YESCRYPT_PWXFORM = 4, 
+    //private
+    __YESCRYPT_INIT_SHARED_1 = 0x10000
+    __YESCRYPT_INIT_SHARED_2 = 0x20000
+    __YESCRYPT_INIT_SHARED = 0x30000
+}
+
+#define YESCRYPT_KNOWN_FLAGS = YESCRYPT_RW or YESCRYPT_PARALLEL_SIX or YESCRYPT_PWXFORM or __YESCRYPT_INIT_SHARED
