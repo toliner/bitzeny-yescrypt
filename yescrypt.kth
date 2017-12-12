@@ -88,7 +88,7 @@ enum yescrypt_flags_t
 /**
  * yescrypt_init_shared(shared, param, paramlen, N, r, p, flags, mask, buf, buflen)
  * 必要に応じてメモリを割り当て、共通(ROM)データ構造を初期化します。
- * N, r, pのパラメーターは必ずcrypto_scrypt()と同じ状態でなければなりません。
+ * N, r, pのパラメーターは必ずcrypto_scrypt()と同じ条件を満たさなければなりません。
  * paramとparamlenは、ROMがシードされたローカルのパラメーターを指定します。
  * bufがNULLで無い場合、それはbuflenバイト長の、初期化されたROMのメッセージダイジェストを返すのに使われます。
  * (呼び出し元は、これを使って、前回の実行時と同じ方法でROMが計算されたことを確認できます。)
@@ -162,16 +162,15 @@ static int yescrypt_free_local(yescrypt_local_t * __local);
 /**
  * yescrypt_kdf(shared, local, passwd, passwdlen, salt, saltlen,
  *     N, r, p, t, flags, buf, buflen):
- * Compute scrypt(passwd[0 .. passwdlen - 1], salt[0 .. saltlen - 1], N, r,
- * p, buflen), or a revision of scrypt as requested by flags and shared, and
- * write the result into buf.  The parameters N, r, p, and buflen must satisfy
- * the same conditions as with crypto_scrypt().  t controls computation time
- * while not affecting peak memory usage.  shared and flags may request
- * special modes as described below.  local is the thread-local data
- * structure, allowing to preserve and reuse a memory allocation across calls,
- * thereby reducing its overhead.
+ * scrypt(passwd[0 .. passwdlen - 1], salt[0 .. saltlen - 1], N, r,
+ * p, buflen)、もしくはflagsとsharedにより要求された改定されたscryptを計算し、結果をbufに書き込みます。
+ * N, r, p, buflenのパラメータはcrypto_scrypt()と同じ条件を満たしていなければなりません。
+ * tは、ピーク時のメモリ使用量に影響を与えずに計算時間を制御します。
+ * sharedとflagsは、下記に説明される特殊なモードを要求するかもしれません。
+ * localはスレッドローカルなデータ構造で、呼び出し間でのメモリ割り当ての保護と再利用を許可し、
+ * それによってそのオーバーヘッドを削減します。
  *
- * Return 0 on success; or -1 on error.
+ * 成功時に0を、失敗時に1を返します。
  *
  * t controls computation time.  t = 0 is optimal in terms of achieving the
  * highest area-time for ASIC attackers.  Thus, higher computation time, if
