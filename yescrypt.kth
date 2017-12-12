@@ -41,23 +41,26 @@
  * 将来のバージョンで、それぞれがかもしれないので、yescrypt_shared_tとyescrypt_local_tを
  * 適切な代わりとして用いてください。
  */
-yescrypt_region_t {
-	void * base, * aligned;
-	size_t base_size, aligned_size;
+yescrypt_region_t
+{
+    void *base, *aligned;
+    size_t base_size, aligned_size;
 }
 
 /**
  * 共通データ(ROM)とスレッドローカルなデータ(RAM)のデータ構造型
  */
 typealias yescrypt_shared1_t = yescrypt_region_t;
-yescrypt_shared_t {
-	yescrypt_shared1_t shared1;
-	uint32_t mask1;
+yescrypt_shared_t
+{
+    yescrypt_shared1_t shared1;
+    uint32_t mask1;
 };
 typealias yescrypt_local_t = yescrypt_region_t;
 
 //yescrypt_init_shared()で使うフラグ
-enum yescrypt_init_shared_flags_t {
+enum yescrypt_init_shared_flags_t
+{
     YESCRYPT_SHARED_DEFAULTS = 0,
     YESCRYPT_SHARED_PREALLOCATED = 0x100
 }
@@ -65,18 +68,59 @@ enum yescrypt_init_shared_flags_t {
 /**
  * yescrypt_kdf(), yescrypt_gensalt_r(), yescrypt_gensalt()で使うフラグ。
  * or演算で合成可能(ただし、YESCRYPT_WORMとYESCRYPT_RWは共存不可。
- * 各フラグの意味は、yescrypt🤥_kdf()のドキュメント参照。
+ * 各フラグの意味は、yescrypt_kdf()のドキュメント参照。
  */
-enum yescrypt_flags_t {
+enum yescrypt_flags_t
+{
     //public
     YESCRYPT_WORM = 0,
     YESCRYPT_RW = 1,
     YESCRYPT_PAEALLEL_SMIX = 2,
-    YESCRYPT_PWXFORM = 4, 
+    YESCRYPT_PWXFORM = 4,
     //private
-    __YESCRYPT_INIT_SHARED_1 = 0x10000
-    __YESCRYPT_INIT_SHARED_2 = 0x20000
+    __YESCRYPT_INIT_SHARED_1 = 0x10000,
+    __YESCRYPT_INIT_SHARED_2 = 0x20000,
     __YESCRYPT_INIT_SHARED = 0x30000
 }
 
 #define YESCRYPT_KNOWN_FLAGS = YESCRYPT_RW or YESCRYPT_PARALLEL_SIX or YESCRYPT_PWXFORM or __YESCRYPT_INIT_SHARED
+
+/**
+ * yescrypt_init_shared(shared, param, paramlen, N, r, p, flags, mask, buf, buflen)
+ * 必要に応じてメモリを割り当て、共通(ROM)データ構造を初期化します。
+ * N, r, pのパラメーターは必ずcrypto_scrypt()と同じ状態でなければなりません。
+ * paramとparamlenは、ROMがシードされたローカルのパラメーターを指定します。
+ * bufがNULLで無い場合、それはbuflenバイト長の、初期化されたROMのメッセージダイジェストを返すのに使われます。
+ * (呼び出し元は、これを使って、前回の実行時と同じ方法でROMが計算されたことを確認できます。)
+ * 成功時に0を、失敗時に1を返します。
+ * YESCRYPT_SHARED_PREALLOCATEDフラグがセットされている場合、ROM用のメモリは呼び出しにもとにより、
+ * shared->shared1.alighnedを開始位置とし、shared->shared1.aligned_sizeバイト長に事前に割り当てられていると仮定します。
+ * (それはN, r, pと一貫していなければなりません。)これは、例えば、ROMが呼び出し元により、SysVの割り当てられた
+ * 共有メモリセグメントに配置されている時に使われます。
+ * maskは、yescrypt_kdf()によるROMへのアクセス頻度を制御します。通常、それはRAMとROMのアクセスをインタリーブするために、
+ * 両方の領域がRAMのどこに配置されていたとしてもうまく働く1にされるべきです。
+ * 他の値は、例えばROMがディスクのファイルからメモリにマップされている時に使われます。
+ * 推奨されるmaskの値は、2の累乗から1か2を引いたものです。いかが、幾つかのmaskの値の効果です。
+ * mask	value	ROM accesses in SMix 1st loop	ROM accesses in SMix 2nd loop
+ *	0		0				1/2
+ *	1		1/2				1/2
+ *	2		0				1/4
+ *	3		1/4				1/4
+ *	6		0				1/8
+ *	7		1/8				1/8
+ *	14		0				1/16
+ *	15		1/16			1/16
+ *	1022	0				1/1024
+ *	1023	1/1024			1/1024
+ * 
+ * もし、ROMを使うことを意図していないがダミーの共通構造が必要ならば、この関数を
+ * (NULL, 0, 0, 0, 0, YESCRYPT_SHARED_DEFAULTS, 0, NULL, 0)の引数で呼び出すことで
+ * ROMの内容の実際の計算は避けられるかもしれません。
+ * この関数は、sharedがスレッドローカルである限り、MT安全(スレッドセーフ&並列保証)です。
+ */
+static int
+yescrypt_init_shared(yescrypt_shared_t *__shared,
+                     const uint8_t *__param, size_t __paramlen,
+                     uint64_t __N, uint32_t __r, uint32_t __p,
+                     yescrypt_init_shared_flags_t __flags, uint32_t __mask,
+                     uint8_t *__buf, size_t __buflen);
