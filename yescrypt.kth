@@ -117,7 +117,7 @@ enum yescrypt_flags_t
  * 
  * もし、ROMを使うことを意図していないがダミーの共通構造が必要ならば、この関数を
  * (NULL, 0, 0, 0, 0, YESCRYPT_SHARED_DEFAULTS, 0, NULL, 0)の引数で呼び出すことで
- * ROMの内容の実際の計算は避けられるかもしれません。
+ * ROMの内容の実際の計算は避けられるでしょう。
  * 
  * この関数は、sharedがスレッドローカルである限り、MT安全(スレッドセーフ&並列保証)です。
  */
@@ -166,44 +166,36 @@ static int yescrypt_free_local(yescrypt_local_t * __local);
  * p, buflen)、もしくはflagsとsharedにより要求された改定されたscryptを計算し、結果をbufに書き込みます。
  * N, r, p, buflenのパラメータはcrypto_scrypt()と同じ条件を満たしていなければなりません。
  * tは、ピーク時のメモリ使用量に影響を与えずに計算時間を制御します。
- * sharedとflagsは、下記に説明される特殊なモードを要求するかもしれません。
+ * sharedとflagsは、下記に説明される特殊なモードを要求するでしょう。
  * localはスレッドローカルなデータ構造で、呼び出し間でのメモリ割り当ての保護と再利用を許可し、
  * それによってそのオーバーヘッドを削減します。
  *
  * 成功時に0を、失敗時に1を返します。
  *
- * t controls computation time.  t = 0 is optimal in terms of achieving the
- * highest area-time for ASIC attackers.  Thus, higher computation time, if
- * affordable, is best achieved by increasing N rather than by increasing t.
- * However, if the higher memory usage (which goes along with higher N) is not
- * affordable, or if fine-tuning of the time is needed (recall that N must be a
- * power of 2), then t = 1 or above may be used to increase time while staying
- * at the same peak memory usage.  t = 1 increases the time by 25% and
- * decreases the normalized area-time to 96% of optimal.  (Of course, in
- * absolute terms the area-time increases with higher t.  It's just that it
- * would increase slightly more with higher N*r rather than with higher t.)
- * t = 2 increases the time by another 20% and decreases the normalized
- * area-time to 89% of optimal.  Thus, these two values are reasonable to use
- * for fine-tuning.  Values of t higher than 2 result in further increase in
- * time while reducing the efficiency much further (e.g., down to around 50% of
- * optimal for t = 5, which runs 3 to 4 times slower than t = 0, with exact
- * numbers varying by the flags settings).
- *
- * Classic scrypt is available by setting t = 0 and flags to YESCRYPT_WORM and
- * passing a dummy shared structure (see the description of
- * yescrypt_init_shared() above for how to produce one).  In this mode, the
- * thread-local memory region (RAM) is first sequentially written to and then
- * randomly read from.  This algorithm is friendly towards time-memory
- * tradeoffs (TMTO), available both to defenders (albeit not in this
- * implementation) and to attackers.
- *
- * Setting YESCRYPT_RW adds extra random reads and writes to the thread-local
- * memory region (RAM), which makes TMTO a lot less efficient.  This may be
- * used to slow down the kinds of attackers who would otherwise benefit from
- * classic scrypt's efficient TMTO.  Since classic scrypt's TMTO allows not
- * only for the tradeoff, but also for a decrease of attacker's area-time (by
- * up to a constant factor), setting YESCRYPT_RW substantially increases the
- * cost of attacks in area-time terms as well.  Yet another benefit of it is
+ * tは計算時間を制御します。t=0は、ASICによる攻撃者に対し、最大のAT計算量(計算するのに要するリソースと時間。
+ * time-memory trade-offを参照。)を獲得したい時に最適です。したがって、可能ならば、tを増やすよりむしろ
+ * Nを増やすほうがより長い計算時間を獲得するのに最適です。
+ * しかし、もしメモリ使用量が大きくなることが許容できない(Nが大きくなるとメモリ使用量も大きくなる)、
+ * もしくは良くチューニングされた計算時間が要求される(Nは2のべき乗でなければならないということを思い出してください)
+ * なら、tを1か、より大きくするのが、同じピーク時のメモリ使用量のままで計算時間を増やすのに使われるでしょう。
+ * t=1の時、計算時間を25%上昇させ、標準化されたAT計算量は、最適の96%に減少します。(当然、絶対的なAT計算量はtが大きくなると
+ * 大きくなりますが、tを高くするよりもむしろN*rを大きくしたほうがわずかに大きくなるでしょう。)
+ * t=2の時、計算時間を追加で20%上昇させ、標準化されたAT計算量は最適の89%に減少します。
+ * したがって、この2つの値は計算時間をチューニングするのには適しています。
+ * 2よりも大きな値は、より効率を下げるのと引き換えにより計算時間を増やします。
+ * (例えば、t=5の時には、効率は50%程度まで下がり、t=0の時の3~4倍ほど実行が遅くなりますが、正確な値はflagsの設定により異なります。)
+ * 
+ * 古典的なscryptは、t=0に設定し、flagsをYSCRYPT_WORMに設定し、ダミーの共通データ構造を渡すことで有効化します。
+ * (どのようにそれを作るかは、yescrypt_init_shared()の説明を見てください。)
+ * このモードでは、スレッドローカルなメモリ領域(RAM)は、最初に逐次的に書き込まれ、次にランダムに読まれます。
+ * このアルゴリズムは、TMTOに対して友好的で、防御者と(この実装ではないのにかかわらず)攻撃者に有効です。
+ * 
+ * YESCRYPT_RWを設定すると、スレッドローカルなメモリ領域(RAM)への、余分なランダムな読み書きを追加し、
+ * TMTO効率を大幅に下げます。これは、古典的なscryptでのTMTO効率により利益を得ている攻撃者を低速化するのに使われるでしょう
+ * 古典的なscryptのTMTOは、トレードオフだけでなく、攻撃者のAT計算量を減らすことも許可しているので、
+ * YESCRYPT_RWを設定することで十分に、AT計算量の面で攻撃者のコストを増やすことができます。
+ * 
+ * Yet another benefit of it is
  * that optimal area-time is reached at an earlier time than with classic
  * scrypt, and t = 0 actually corresponds to this earlier completion time,
  * resulting in quicker hash computations (and thus in higher request rate
